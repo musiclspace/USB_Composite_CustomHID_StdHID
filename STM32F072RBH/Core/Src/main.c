@@ -24,6 +24,7 @@
 #include "user_dfu.h"
 #include "user_custom_hid.h"
 #include "user_log.h"
+#include "user_usb_composite.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -93,7 +94,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USB_DEVICE_Init();
+  //MX_USB_DEVICE_Init();
+  USBD_Composite_DEVICE_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   pr_info("USB CUSTOM HID Start ...");
@@ -105,6 +107,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+    for(int i = 0;i < 64;i++)
+      txdata[i] = i+1;
     user_custom_hid_send(txdata);
     HAL_Delay(10);
     /* USER CODE BEGIN 3 */
