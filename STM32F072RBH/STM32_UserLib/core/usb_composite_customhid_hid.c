@@ -11,22 +11,21 @@
  * @Date    2019/12/27  
  *
  ***************************************************************************************/
-#include "user_usb_composite.h"
-
+#include "usb_composite_customhid_hid.h"
+#include "user_log.h"
 static USBD_CUSTOM_HID_HandleTypeDef *pCustomHID_ClassData;
-//static USBD_HID_HandleTypeDef *pStdHID_ClassData;
+static USBD_HID_HandleTypeDef *pStdHID_ClassData;
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
-
+#define USB_COMPOSITE_CONFIG_DESC_SIZ 66
 /* USB CUSTOM_HID device FS Configuration Descriptor */
-__ALIGN_BEGIN static uint8_t USBD_Composite_CfgFSDesc[USB_CUSTOM_HID_CONFIG_DESC_SIZ] __ALIGN_END =
+__ALIGN_BEGIN static uint8_t USBD_Composite_CfgFSDesc[USB_COMPOSITE_CONFIG_DESC_SIZ] __ALIGN_END =
 {
   0x09, /* bLength: Configuration Descriptor size */
   USB_DESC_TYPE_CONFIGURATION, /* bDescriptorType: Configuration */
-  USB_CUSTOM_HID_CONFIG_DESC_SIZ,
-  /* wTotalLength: Bytes returned */
+  USB_COMPOSITE_CONFIG_DESC_SIZ, /* wTotalLength: Bytes returned */
   0x00,
-  0x01,         /*bNumInterfaces: 1 interface*/
+  0x02,         /*bNumInterfaces: 1 interface*/
   0x01,         /*bConfigurationValue: Configuration value*/
   0x00,         /*iConfiguration: Index of string descriptor describing
   the configuration*/
@@ -75,6 +74,39 @@ __ALIGN_BEGIN static uint8_t USBD_Composite_CfgFSDesc[USB_CUSTOM_HID_CONFIG_DESC
   0x00,
   CUSTOM_HID_FS_BINTERVAL,  /* bInterval: Polling Interval */
   /* 41 */
+  
+  /************** Descriptor of Joystick Mouse interface ****************/
+  0x09,         /*bLength: Interface Descriptor size*/
+  USB_DESC_TYPE_INTERFACE,/*bDescriptorType: Interface descriptor type*/
+  0x01,         /*bInterfaceNumber: Number of Interface*/
+  0x00,         /*bAlternateSetting: Alternate setting*/
+  0x01,         /*bNumEndpoints*/
+  0x03,         /*bInterfaceClass: HID*/
+  0x01,         /*bInterfaceSubClass : 1=BOOT, 0=no boot*/
+  0x02,         /*nInterfaceProtocol : 0=none, 1=keyboard, 2=mouse*/
+  0,            /*iInterface: Index of string descriptor*/
+  /******************** Descriptor of Joystick Mouse HID ********************/
+  /* 50 */
+  0x09,         /*bLength: HID Descriptor size*/
+  HID_DESCRIPTOR_TYPE, /*bDescriptorType: HID*/
+  0x11,         /*bcdHID: HID Class Spec release number*/
+  0x01,
+  0x00,         /*bCountryCode: Hardware target country*/
+  0x01,         /*bNumDescriptors: Number of HID class descriptors to follow*/
+  0x22,         /*bDescriptorType*/
+  HID_MOUSE_REPORT_DESC_SIZE,/*wItemLength: Total length of Report descriptor*/
+  0x00,
+  /******************** Descriptor of Mouse endpoint ********************/
+  /* 59 */
+  0x07,          /*bLength: Endpoint Descriptor size*/
+  USB_DESC_TYPE_ENDPOINT, /*bDescriptorType:*/
+
+  HID_EPIN_ADDR,     /*bEndpointAddress: Endpoint Address (IN)*/
+  0x03,          /*bmAttributes: Interrupt endpoint*/
+  HID_EPIN_SIZE, /*wMaxPacketSize: 4 Byte max */
+  0x00,
+  HID_FS_BINTERVAL,          /*bInterval: Polling Interval */
+  /* 66 */
 };
 
 
@@ -119,8 +151,8 @@ static uint8_t  USBD_Composite_Init (USBD_HandleTypeDef *pdev,uint8_t cfgidx)
     ret +=  USBD_CUSTOM_HID.Init(pdev,cfgidx);
     pCustomHID_ClassData = pdev->pClassData;
     
-//    ret +=  USBD_HID.Init(pdev,cfgidx);
-//    pStdHID_ClassData = pdev->pClassData;
+    ret +=  USBD_HID.Init(pdev,cfgidx);
+    pStdHID_ClassData = pdev->pClassData;
     return ret;
 }
 static uint8_t  USBD_Composite_DeInit (USBD_HandleTypeDef *pdev,uint8_t cfgidx)
@@ -130,9 +162,9 @@ static uint8_t  USBD_Composite_DeInit (USBD_HandleTypeDef *pdev,uint8_t cfgidx)
     pdev->pUserData = &USBD_CustomHID_fops_FS;
     ret +=  USBD_CUSTOM_HID.DeInit(pdev,cfgidx);
     
-//    pdev->pClassData = pStdHID_ClassData;
-//    pdev->pUserData = NULL;
-//    ret +=  USBD_HID.DeInit(pdev,cfgidx);
+    pdev->pClassData = pStdHID_ClassData;
+    pdev->pUserData = NULL;
+    ret +=  USBD_HID.DeInit(pdev,cfgidx);
     return ret;
 }
 /**
@@ -157,12 +189,14 @@ static uint8_t  USBD_Composite_Setup (USBD_HandleTypeDef *pdev,USBD_SetupReqType
         pdev->pClassData = pCustomHID_ClassData;
         pdev->pUserData = &USBD_CustomHID_fops_FS;
         ret = USBD_CUSTOM_HID.Setup(pdev,req);
+        pr_info("hid setup");
     }
     else
     {
-//        pdev->pClassData = pStdHID_ClassData;
-//        pdev->pUserData = NULL;
-//        ret = USBD_HID.Setup(pdev,req);
+        pdev->pClassData = pStdHID_ClassData;
+        pdev->pUserData = NULL;
+        ret = USBD_HID.Setup(pdev,req);
+         pr_info("mouse setup");
     }
     return ret;
 }
@@ -172,18 +206,18 @@ static uint8_t  USBD_Composite_Setup (USBD_HandleTypeDef *pdev,USBD_SetupReqType
 static uint8_t  USBD_Composite_DataIn (USBD_HandleTypeDef *pdev,uint8_t epnum)
 {
     uint8_t ret = 0;
-//    if(epnum == (CUSTOM_HID_EPIN_ADDR & 0x0F))
-//    {
+    if(epnum == (CUSTOM_HID_EPIN_ADDR & 0x0F))
+    {
         pdev->pClassData = pCustomHID_ClassData;
         pdev->pUserData = &USBD_CustomHID_fops_FS;
         ret += USBD_CUSTOM_HID.DataIn(pdev,epnum);
-//    }
-//    else
-//    {
-//        pdev->pClassData = pStdHID_ClassData;
-//        pdev->pUserData = NULL;
-//        ret += USBD_HID.DataIn(pdev,epnum);
-//    }
+    }
+    else
+    {
+        pdev->pClassData = pStdHID_ClassData;
+        pdev->pUserData = NULL;
+        ret += USBD_HID.DataIn(pdev,epnum);
+    }
     return ret;
 }
 /**
@@ -192,7 +226,7 @@ static uint8_t  USBD_Composite_DataIn (USBD_HandleTypeDef *pdev,uint8_t epnum)
 static uint8_t  USBD_Composite_DataOut (USBD_HandleTypeDef *pdev,uint8_t epnum)
 {
     uint8_t ret = 0;
-//    if(epnum == (CUSTOM_HID_EPIN_ADDR & 0x0F))
+    if(epnum == (CUSTOM_HID_EPIN_ADDR & 0x0F))
     {
         pdev->pClassData = pCustomHID_ClassData;
         pdev->pUserData = &USBD_CustomHID_fops_FS;
@@ -216,8 +250,5 @@ void USBD_Composite_DEVICE_Init(void)
 {
     USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
     USBD_RegisterClass(&hUsbDeviceFS, &USBD_COMPOSITE);
-    //USBD_RegisterClass(&hUsbDeviceFS, &USBD_CUSTOM_HID);
-    //USBD_CUSTOM_HID_RegisterInterface(&hUsbDeviceFS, &USBD_CustomHID_fops_FS);
     USBD_Start(&hUsbDeviceFS);
-  
 }
