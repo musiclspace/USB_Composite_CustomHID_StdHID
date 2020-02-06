@@ -24,7 +24,8 @@
 #include "user_dfu.h"
 #include "user_custom_hid.h"
 #include "user_log.h"
-#include "user_usb_composite.h"
+#include "usb_composite_customhid_hid.h"
+#include "user_hid_mouse.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -112,6 +113,8 @@ int main(void)
     user_custom_hid_send(txdata);
     HAL_Delay(10);
     /* USER CODE BEGIN 3 */
+      user_hid_mouse_move(10,10);
+      HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }

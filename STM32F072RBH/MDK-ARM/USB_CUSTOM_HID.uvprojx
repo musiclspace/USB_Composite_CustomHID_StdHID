@@ -603,9 +603,14 @@
               <FilePath>..\STM32_UserLib\core\user_custom_hid.c</FilePath>
             </File>
             <File>
-              <FileName>user_usb_composite.c</FileName>
+              <FileName>user_hid_mouse.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\STM32_UserLib\core\user_usb_composite.c</FilePath>
+              <FilePath>..\STM32_UserLib\core\user_hid_mouse.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_composite_customhid_hid.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\STM32_UserLib\core\usb_composite_customhid_hid.c</FilePath>
             </File>
           </Files>
         </Group>
