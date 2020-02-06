@@ -25,7 +25,7 @@
 #include "usbd_def.h"
 #include "usbd_core.h"
 #include "usbd_customhid.h"
-
+#include "usbd_hid.h"
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -339,6 +339,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , CUSTOM_HID_EPIN_ADDR , PCD_SNG_BUF, 0x98);
   HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , CUSTOM_HID_EPOUT_ADDR , PCD_SNG_BUF, 0xD8);
   /* USER CODE END EndPoint_Configuration_CUSTOM_HID */
+  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , HID_EPIN_ADDR , PCD_SNG_BUF, 0xD8);
   return USBD_OK;
 }
 
